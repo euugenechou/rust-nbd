@@ -440,8 +440,8 @@ impl<F: Blocks + Sync + Send + 'static> Server<F> {
     }
 
     /// Start accepting connections from clients and processing commands.
-    pub fn start(self) -> Result<()> {
-        let addr = ("127.0.0.1", TCP_PORT);
+    pub fn start(self, port: u16) -> Result<()> {
+        let addr = ("127.0.0.1", port);
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
             let stream = stream?;

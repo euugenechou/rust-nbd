@@ -17,7 +17,8 @@ use bitflags::bitflags;
 use byteorder::{ReadBytesExt, WriteBytesExt, BE};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-pub(crate) const TCP_PORT: u16 = 10809;
+/// Default port used by NBD.
+pub const DEFAULT_PORT: u16 = 10809;
 
 pub(crate) const MAGIC: u64 = 0x4e42444d41474943; // b"NBDMAGIC"
 pub(crate) const IHAVEOPT: u64 = 0x49484156454F5054; // b"IHAVEOPT"

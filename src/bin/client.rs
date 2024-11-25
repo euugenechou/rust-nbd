@@ -1,17 +1,21 @@
-use clap::Parser;
-use color_eyre::eyre::{bail, WrapErr};
-use color_eyre::Result;
-use fork::{daemon, Fork};
-
 use std::fs::{File, OpenOptions};
 
-use nbd::{client::Client, kernel};
+use clap::Parser;
+use color_eyre::{
+    eyre::{bail, WrapErr},
+    Result,
+};
+use fork::{daemon, Fork};
+use nbd::{client::Client, kernel, proto::DEFAULT_PORT};
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Args {
     #[clap(short = 'a', long, default_value = "localhost")]
     host: String,
+
+    #[clap(short, long, default_value_t = DEFAULT_PORT)]
+    port: u16,
 
     #[clap(short, long, help = "disconnect from an existing client")]
     disconnect: bool,
@@ -47,7 +51,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let client = Client::connect(&args.host).wrap_err("connecting to nbd server")?;
+    let client = Client::connect(&args.host, args.port).wrap_err("connecting to nbd server")?;
 
     let nbd = match open_nbd(&args) {
         Ok(nbd) => nbd,

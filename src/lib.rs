@@ -1,6 +1,6 @@
 pub mod client;
 pub mod kernel;
-mod proto;
+pub mod proto;
 pub mod server;
 
 #[cfg(test)]

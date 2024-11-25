@@ -1,12 +1,18 @@
-use clap::Parser;
-use color_eyre::Result;
 use std::fs::OpenOptions;
 
-use nbd::server::{MemBlocks, Server};
+use clap::Parser;
+use color_eyre::Result;
+use nbd::{
+    proto::DEFAULT_PORT,
+    server::{MemBlocks, Server},
+};
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Args {
+    #[clap(short, long, default_value_t = DEFAULT_PORT)]
+    port: u16,
+
     #[clap(long)]
     no_create: bool,
 
@@ -31,7 +37,7 @@ fn main() -> Result<()> {
     if args.mem {
         let data = vec![0u8; size_bytes as usize];
         let export = MemBlocks::new(data);
-        Server::new(export).start()?;
+        Server::new(export).start(args.port)?;
         return Ok(());
     }
 
@@ -43,6 +49,6 @@ fn main() -> Result<()> {
 
     file.set_len(size_bytes)?;
 
-    Server::new(file).start()?;
+    Server::new(file).start(args.port)?;
     Ok(())
 }
