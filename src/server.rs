@@ -11,6 +11,7 @@
 use std::fs::File;
 use std::io::{self, prelude::*};
 use std::net::TcpListener;
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::FileExt;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -56,8 +57,7 @@ impl Blocks for File {
     }
 
     fn flush(&self) -> io::Result<()> {
-        self.sync_all()?;
-        Ok(())
+        self.sync_all()
     }
 }
 
@@ -107,6 +107,58 @@ impl Blocks for MemBlocks {
 
     fn flush(&self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+/// `Device` abstracts over a raw block device.
+#[derive(Debug)]
+pub struct Device(File);
+
+impl Device {
+    /// Creates a new `Device` backed by the given file.
+    ///
+    /// The file should be opened with read/write permissions.
+    pub fn new(inner: File) -> Self {
+        Self(inner)
+    }
+}
+
+// Ioctl constants for BLKGETSIZE64.
+// Defined in linux/fs.h.
+const BLKGETSIZE64_IOC_MAGIC: u8 = 0x12;
+const BLKGETSIZE64_IOC_NUM: u8 = 114;
+
+// Ioctl wrapper for BLKGETSIZE64.
+nix::ioctl_read!(
+    /// Gets the size of a block device.
+    get_blkdev_size,
+    BLKGETSIZE64_IOC_MAGIC,
+    BLKGETSIZE64_IOC_NUM,
+    u64
+);
+
+impl Blocks for Device {
+    fn read_at(&self, buf: &mut [u8], off: u64) -> io::Result<()> {
+        FileExt::read_exact_at(&self.0, buf, off)
+    }
+
+    fn write_at(&self, buf: &[u8], off: u64) -> io::Result<()> {
+        FileExt::write_all_at(&self.0, buf, off)
+    }
+
+    fn size(&self) -> io::Result<u64> {
+        unsafe {
+            let mut size = 0;
+            let ret = get_blkdev_size(self.0.as_raw_fd(), &raw mut size)
+                .map_err(|_| io::Error::last_os_error())?;
+            (ret == 0)
+                .then_some(size)
+                .ok_or_else(|| io::Error::last_os_error())
+        }
+    }
+
+    fn flush(&self) -> io::Result<()> {
+        self.0.sync_all()
     }
 }
 
